@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Timekeep</string>
+    <string name="timekeep">timekeep</string>
+    <string name="sleepString">set</string>
+    <string name="finalString">begin</string>
+    <string name="sharedPrefs">timekeep</string>
+    <string name="lastSleepTimeKey">lastSleep</string>
+    <string name="calendarIdKey">calendar</string>
+    <string name="taskBooleanExtra">selecting</string>
+    <string name="taskSleepLengthExtra">sleepLength</string>
+    <string name="percentLeftExtra">percentLeft</string>
+    <string name="allocationMapExtra">allocationMap</string>
+    <string name="cycleOnKey">cycleOn</string>
+    <string name="sleepMinuteKey">sleepMinute</string>
+    <string name="sleepHourKey">sleepHour</string>
+    <string name="taskListKey">taskList</string>
+    <string name="taskNameExtra">taskName</string>
+    <string name="taskOrderExtra">taskOrder</string>
+</resources>
