@@ -4,12 +4,14 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Binder;
 import android.os.Build;
 import android.os.CountDownTimer;
 import android.os.IBinder;
+import android.os.PowerManager;
 
 import androidx.core.app.NotificationCompat;
 
@@ -22,6 +24,7 @@ public class TimerService extends Service {
     private final int NOTIFICATION_ID = 1234;
     private final int NOTIFICATION_ID2 = 1235;
 
+    PowerManager.WakeLock wakeLock;
 
     private int divisions;
     private String[] taskNames;
@@ -60,6 +63,14 @@ public class TimerService extends Service {
         TimerService getService() {
             // Return this instance of LocalService so clients can call public methods
             return TimerService.this;
+        }
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
         }
     }
 
@@ -137,6 +148,11 @@ public class TimerService extends Service {
             startTimer();
         }
         else{
+            //Turn off wakeLock
+            if(wakeLock != null && wakeLock.isHeld()){
+                wakeLock.release();
+            }
+
             //Turn cycle off
             SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.sharedPrefs), MODE_PRIVATE);
             SharedPreferences.Editor editor = sharedPreferences.edit();
@@ -162,6 +178,8 @@ public class TimerService extends Service {
         }
     }
 
+
+
     public void startTimer(){
         if(countDownTimer != null){
             countDownTimer.cancel();
@@ -175,6 +193,11 @@ public class TimerService extends Service {
                     timerIndex = i;
                 }
             }
+        }
+        if(wakeLock == null || !wakeLock.isHeld()){
+            PowerManager mgr = (PowerManager) getApplicationContext().getSystemService(Context.POWER_SERVICE);
+            wakeLock = mgr.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "timekeep: timerLock");
+            wakeLock.acquire();
         }
         countDownTimer = new CountDownTimer((int) millisRemaining[timerIndex] * divisions, 1000) {
             @Override
@@ -246,6 +269,9 @@ public class TimerService extends Service {
     }
 
     public void reset(){
+        if(wakeLock != null && wakeLock.isHeld()){
+            wakeLock.release();
+        }
         detach();
         countDownTimer.cancel();
         stopSelf();
