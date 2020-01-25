@@ -17,10 +17,6 @@ import android.os.IBinder;
 import android.view.View;
 import android.widget.TextView;
 
-import org.w3c.dom.Text;
-
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class ProgressActivity extends AppCompatActivity implements ProgressAdapater.OnProgressListener {
@@ -74,11 +70,14 @@ public class ProgressActivity extends AppCompatActivity implements ProgressAdapa
 
         //Get data from intent
         Intent old = getIntent();
-        taskNames = old.getStringArrayExtra(getString(R.string.taskOrderExtra));
+        String[] taskNamesTemp = old.getStringArrayExtra(getString(R.string.taskOrderExtra));
+        taskNames = new String[taskNamesTemp.length + 1];
+        taskNames[0] = getString(R.string.schedule);
+        System.arraycopy(taskNamesTemp, 0, taskNames, 1, taskNamesTemp.length);
         active = new boolean[taskNames.length];
-        active[0] = true;
+        active[1] = true;
 
-        recyclerSetup();;
+        recyclerSetup();
 
         textViewSetup();
 
@@ -139,7 +138,7 @@ public class ProgressActivity extends AppCompatActivity implements ProgressAdapa
 
     private void bindToService(TimerService service) {
         if(service.beenAttached()){
-            //get the info needed
+            //get the info needed - service has been running
             sharedPreferences = getSharedPreferences(getString(R.string.sharedPrefs), MODE_PRIVATE);
             taskNames = service.getTaskNames();
             active = service.getActive();
@@ -148,42 +147,41 @@ public class ProgressActivity extends AppCompatActivity implements ProgressAdapa
             service.attach(this, null);
         }
         else{
-            //give it the info it needed
+            //give info needed - service just started
             service.attach(this, active);
+            List<SchedulePair> schedule = (List<SchedulePair>) getIntent().getSerializableExtra(getString(R.string.scheduleExtra));
+            service.loadSchedule(schedule);
             service.startTimer();
         }
     }
 
     @Override
     public void OnProgressClick(int position) {
-        int activePos = -1;
+        if(position == 0 || active[0] == true || !service.checkActive(position)){
+            return;
+        }
         for(int i = 0; i < active.length; i++){
-            if(active[i]){
-                activePos = i;
-            }
+           active[i] = false;
         }
-        if(position == activePos){
+        active[position] = true;
+        mAdapter.notifyDataSetChanged();
+        service.startTimer();
+    }
+
+    @Override
+    public void multiRun(int position){
+        if(position == 0 || active[0] == true){
             return;
         }
-        if(service.checkActive(position)){
+        if(active[position]){
+            //Minus
+            active[position] = false;
+        }
+        else if(service.checkActive(position)){
+            //Plus
             active[position] = true;
-            active[activePos] = false;
         }
-        else{
-            return;
-        }
-//        if(active[position]){
-//            int activeCount = 0;
-//            for(int i = 0; i < active.length; i++){
-//                if(active[i]){
-//                    activeCount++;
-//                }
-//            }
-//            if(activeCount == 1){
-//                return;
-//            }
-//        }
-//        active[position] = !active[position];
+
         mAdapter.notifyDataSetChanged();
         service.startTimer();
     }

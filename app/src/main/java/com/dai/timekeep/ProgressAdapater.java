@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -47,20 +48,67 @@ public class ProgressAdapater extends RecyclerView.Adapter<ProgressAdapater.View
     }
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull ViewHolder holder, final int position) {
         String label = labels[position];
         holder.label.setText(label);
         timerTexts[position] = holder.time;
-        if(active[position]){
-            holder.layout.setBackgroundColor(darkColor);
-            holder.label.setTextColor(lightColor);
-            holder.time.setTextColor(lightColor);
+        holder.multiRunButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                mOnProgressListener.multiRun(position);
+            }
+        });
+
+        if(active[0]){
+            if(position != 0){
+                multiRunButtonSetup(holder, true, false, "X");
+            }
+            else{
+                multiRunButtonSetup(holder, false, false, "*");
+            }
+        }
+
+
+        int activeCount = 0;
+        for(int i = 1; i < active.length; i++){
+            if(active[i]){
+                activeCount++;
+            }
+        }
+
+        if(position == 0){
+            multiRunButtonSetup(holder, true, false, "X");
+        }
+        else if(active[position]){
+            if(activeCount == 1){
+                multiRunButtonSetup(holder, false, false, "*");
+            }
+            else{
+                multiRunButtonSetup(holder, false, true, "-");
+            }
         }
         else{
+            multiRunButtonSetup(holder, true, true, "+");
+        }
+    }
+
+    private void multiRunButtonSetup(ViewHolder holder, boolean lightBackground, boolean clickable, String symbol){
+        if(lightBackground){
             holder.layout.setBackgroundColor(lightColor);
             holder.label.setTextColor(darkColor);
             holder.time.setTextColor(darkColor);
+            holder.multiRunButton.setBackgroundResource(R.drawable.border);
+            holder.multiRunButton.setTextColor(darkColor);
         }
+        else{
+            holder.layout.setBackgroundColor(darkColor);
+            holder.label.setTextColor(lightColor);
+            holder.time.setTextColor(lightColor);
+            holder.multiRunButton.setBackgroundResource(R.drawable.border_white);
+            holder.multiRunButton.setTextColor(lightColor);
+        }
+        holder.multiRunButton.setClickable(clickable);
+        holder.multiRunButton.setText(symbol);
     }
 
     @Override
@@ -77,13 +125,16 @@ public class ProgressAdapater extends RecyclerView.Adapter<ProgressAdapater.View
         TextView label;
         TextView time;
         LinearLayout layout;
+        Button multiRunButton;
         OnProgressListener onProgressListener;
         ImageView drag;
+
         public ViewHolder(@NonNull View itemView, OnProgressListener onProgressListener) {
             super(itemView);
             label = itemView.findViewById(R.id.taskProgressName);
-            time = itemView.findViewById((R.id.taskProgressTime));
+            time = itemView.findViewById(R.id.taskProgressTime);
             layout = itemView.findViewById(R.id.progressElement);
+            multiRunButton = itemView.findViewById(R.id.multiRunButton);
             this.onProgressListener = onProgressListener;
             itemView.setOnClickListener(this);
         }
@@ -96,6 +147,7 @@ public class ProgressAdapater extends RecyclerView.Adapter<ProgressAdapater.View
 
     public interface OnProgressListener{
         void OnProgressClick(int position);
+        void multiRun(int position);
     }
 
 }

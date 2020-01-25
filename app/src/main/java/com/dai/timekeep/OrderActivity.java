@@ -51,27 +51,12 @@ public class OrderActivity extends AppCompatActivity implements OrderAdapter.OnO
     }
 
     public void doneRearranging(View view) {
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.WAKE_LOCK) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WAKE_LOCK}, 1);
-        }
-        else{
-            Intent i1 = new Intent(this, ProgressActivity.class);
-            i1.putExtras(getIntent());
-            i1.putExtra(getString(R.string.taskOrderExtra), taskNames);
-            //start up notifications
-            i1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(i1);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        for(int i = 0; i < permissions.length; i++){
-            if(permissions[i].compareTo(Manifest.permission.WAKE_LOCK) == 0 && grantResults[i] == PackageManager.PERMISSION_GRANTED){
-                doneRearranging(null);
-            }
-        }
+        Intent i1 = new Intent(this, ProgressActivity.class);
+        i1.putExtras(getIntent());
+        i1.putExtra(getString(R.string.taskOrderExtra), taskNames);
+        //start up notifications
+        i1.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(i1);
     }
 
     @Override

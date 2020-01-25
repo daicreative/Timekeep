@@ -13,10 +13,16 @@ import android.view.View;
 import android.widget.NumberPicker;
 import android.widget.TimePicker;
 
+import java.sql.Array;
 import java.sql.Time;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+
 import android.content.SharedPreferences;
 
 
@@ -58,31 +64,46 @@ public class SleepActivity extends AppCompatActivity {
         editor.commit();
         int duration = (24*60 + thenMinutes - nowMinutes)%(24*60);
         duration *=  60 * 1000; //minutes to milliseconds
-        //fixme CALENDAR BIZ
-//        if(sharedPreferences.contains(getString(R.string.calendarIdKey))){
-//            int calendarID = sharedPreferences.getInt(getString(R.string.calendarIdKey), 0);
-//            Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
-//            long startMillis = now.getTime();
-//            long endMillis = startMillis + duration;
-//            ContentUris.appendId(builder, startMillis);
-//            ContentUris.appendId(builder, endMillis);
-//            Cursor eventCursor = getContentResolver().query(builder.build(), new String[]{CalendarContract.Instances.TITLE,
-//                            CalendarContract.Instances.BEGIN, CalendarContract.Instances.END, CalendarContract.Instances.DESCRIPTION},
-//                    CalendarContract.Instances.CALENDAR_ID + " = ?", new String[]{Integer.toString(calendarID)}, null);
-//            int sum = 0;
-//            while (eventCursor.moveToNext()) {
-//                //fixme NOT DONE, NEED TO DEDUCT BETTER
-//                //final String title = eventCursor.getString(0);
-//                final Date begin = new Date(eventCursor.getLong(1));
-//                final Date end = new Date(eventCursor.getLong(2));
-//                //final String description = eventCursor.getString(3);
-//                sum += end.getTime() - begin.getTime();
-//            }
-//            duration -= sum;
-//        }
+
+        LinkedList<SchedulePair> schedule = new LinkedList<>();
+        if(sharedPreferences.contains(getString(R.string.calendarIdKey))){
+            int calendarID = sharedPreferences.getInt(getString(R.string.calendarIdKey), 0);
+            Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
+            long startMillis = now.getTime();
+            long endMillis = startMillis + duration;
+            ContentUris.appendId(builder, startMillis);
+            ContentUris.appendId(builder, endMillis);
+            Cursor eventCursor = getContentResolver().query(builder.build(), new String[]{CalendarContract.Instances.TITLE,
+                            CalendarContract.Instances.BEGIN, CalendarContract.Instances.END, CalendarContract.Instances.DESCRIPTION},
+                    CalendarContract.Instances.CALENDAR_ID + " = ?", new String[]{Integer.toString(calendarID)}, null);
+            int sum = 0;
+            long prevBegin = 0;
+            long prevEnd = 0;
+            while (eventCursor.moveToNext()) {
+                long nextBegin = eventCursor.getLong(1);
+                long nextEnd = eventCursor.getLong(2);
+                if(nextBegin < prevEnd){
+                    prevEnd = Math.max(nextEnd, prevEnd);
+                }
+                else{
+                    if(prevBegin != 0){
+                        schedule.add(new SchedulePair(prevBegin, prevEnd));
+                    }
+                    sum += prevEnd - prevBegin;
+                    prevBegin = Math.max(startMillis, nextBegin); //Just in case event start before end
+                    prevEnd = Math.min(endMillis, nextEnd); //Just in case event end after
+                }
+            }
+            if(prevBegin != 0){
+                schedule.add(new SchedulePair(prevBegin, prevEnd));
+            }
+            sum += prevEnd - prevBegin;
+            duration -= sum;
+        }
         Intent i1 = new Intent(this, TaskActivity.class);
         i1.putExtra(getString(R.string.taskBooleanExtra), true);
         i1.putExtra(getString(R.string.taskSleepLengthExtra), duration);
+        i1.putExtra(getString(R.string.scheduleExtra), schedule);
         startActivity(i1);
     }
 
