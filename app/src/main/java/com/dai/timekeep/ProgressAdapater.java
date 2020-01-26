@@ -61,39 +61,39 @@ public class ProgressAdapater extends RecyclerView.Adapter<ProgressAdapater.View
 
         if(active[0]){
             if(position != 0){
-                multiRunButtonSetup(holder, true, false, "X");
+                multiRunButtonSetup(holder, false, false, "X");
             }
             else{
-                multiRunButtonSetup(holder, false, false, "*");
-            }
-        }
-
-
-        int activeCount = 0;
-        for(int i = 1; i < active.length; i++){
-            if(active[i]){
-                activeCount++;
-            }
-        }
-
-        if(position == 0){
-            multiRunButtonSetup(holder, true, false, "X");
-        }
-        else if(active[position]){
-            if(activeCount == 1){
-                multiRunButtonSetup(holder, false, false, "*");
-            }
-            else{
-                multiRunButtonSetup(holder, false, true, "-");
+                multiRunButtonSetup(holder, true, false, "*");
             }
         }
         else{
-            multiRunButtonSetup(holder, true, true, "+");
+            int activeCount = 0;
+            for(int i = 1; i < active.length; i++){
+                if(active[i]){
+                    activeCount++;
+                }
+            }
+
+            if(position == 0){
+                multiRunButtonSetup(holder, false, false, "X");
+            }
+            else if(active[position]){
+                if(activeCount == 1){
+                    multiRunButtonSetup(holder, true, false, "*");
+                }
+                else{
+                    multiRunButtonSetup(holder, true, true, "-");
+                }
+            }
+            else{
+                multiRunButtonSetup(holder, false, true, "+");
+            }
         }
     }
 
-    private void multiRunButtonSetup(ViewHolder holder, boolean lightBackground, boolean clickable, String symbol){
-        if(lightBackground){
+    private void multiRunButtonSetup(ViewHolder holder, boolean selected, boolean clickable, String symbol){
+        if(!selected){
             holder.layout.setBackgroundColor(lightColor);
             holder.label.setTextColor(darkColor);
             holder.time.setTextColor(darkColor);

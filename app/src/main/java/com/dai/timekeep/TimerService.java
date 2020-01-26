@@ -298,7 +298,7 @@ public class TimerService extends Service {
                 activity.timerTexts[timerIndex].setText("Complete");
             }
         }
-        //fixme adjust for schedule
+
         int activeCount = 0;
         int firstAlive = -1;
         for(int i = 1; i < taskCount; i++){
@@ -353,6 +353,9 @@ public class TimerService extends Service {
         for(int i = 1; i < active.length; i++){
             active[i] = false;
         }
+        if(activity != null){
+            activity.notifyChange();
+        }
     }
 
 
@@ -362,11 +365,11 @@ public class TimerService extends Service {
             countDownTimer.cancel();
         }
         if(active[0] == true){
+            divisions = 1;
             timerIndex = 0;
             currentEvent = schedule.remove(0);
-            int endMin = (int) ((currentEvent.getEnd() / (1000*60)) % 60);
-            int endHour   = (int) (currentEvent.getEnd() / (1000*60*60));
-            taskNames[0] = "Schedule (End " + endHour + ":" + String.format("%1$02d" , endMin) + ")";
+            Date endDate = new Date(currentEvent.getEnd());
+            final String endTime = " (End " + endDate.getHours()%12 + ":" + String.format("%1$02d" , endDate.getMinutes()) + ")";
             countDownTimer = new CountDownTimer((int) (currentEvent.getEnd() - currentEvent.getBegin()), 1000) {
                 
                 @Override
@@ -374,12 +377,12 @@ public class TimerService extends Service {
                     String notificationText = "";
                     String timeLeft;
                     int hours, minutes, seconds;
-                    millisRemaining[0] -= 1000/divisions;
+                    millisRemaining[0] -= 1000;
                     seconds = (int) (millisRemaining[0] / 1000) % 60 ;
                     minutes = (int) ((millisRemaining[0] / (1000*60)) % 60);
                     hours   = (int) (millisRemaining[0] / (1000*60*60));
                     timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
-                    notificationText += taskNames[0] + ": " + timeLeft + System.lineSeparator();
+                    notificationText += taskNames[0] + endTime + ": " + timeLeft + System.lineSeparator();
                     if(activity != null){
                         activity.timerTexts[0].setText(timeLeft);
                     }
@@ -394,74 +397,76 @@ public class TimerService extends Service {
             };
             countDownTimer.start();
         }
-
-        divisions = 0;
-        timerIndex = -1;
-        for(int i = 1; i < taskCount; i++){
-            if(active[i]){
-                divisions++;
-                if(timerIndex == -1 || millisRemaining[timerIndex] < millisRemaining[i]){
-                    timerIndex = i;
+        else{
+            divisions = 0;
+            timerIndex = -1;
+            for(int i = 1; i < taskCount; i++){
+                if(active[i]){
+                    divisions++;
+                    if(timerIndex == -1 || millisRemaining[timerIndex] < millisRemaining[i]){
+                        timerIndex = i;
+                    }
                 }
             }
-        }
 
-        countDownTimer = new CountDownTimer((int) millisRemaining[timerIndex] * divisions, 1000) {
-            @Override
-            public void onTick(long millisUntilFinished) {
-                if(schedule != null && !schedule.isEmpty()){
-                    long now = (new Date()).getTime();
-                    schedule.get(0).getBegin();
-                    if(schedule.get(0).getBegin() < now && now < schedule.get(0).getEnd()){
-                        setSchedule();
-                        startTimer();
-                    }
-                }
-                String notificationText = "";
-                String timeLeft;
-                int hours, minutes, seconds;
-                for(int i = 1; i < taskCount; i++){
-                    if(active[i]){
-                        millisRemaining[i] -= 1000/divisions;
-                        seconds = (int) (millisRemaining[i] / 1000) % 60 ;
-                        minutes = (int) ((millisRemaining[i] / (1000*60)) % 60);
-                        hours   = (int) (millisRemaining[i] / (1000*60*60));
-                        timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
-                        notificationText += taskNames[i] + ": " + timeLeft + System.lineSeparator();
-                        if(activity != null){
-                            activity.timerTexts[i].setText(timeLeft);
+            countDownTimer = new CountDownTimer((int) millisRemaining[timerIndex] * divisions, 1000) {
+                @Override
+                public void onTick(long millisUntilFinished) {
+                    if(schedule != null && !schedule.isEmpty()){
+                        long now = (new Date()).getTime();
+                        schedule.get(0).getBegin();
+                        if(schedule.get(0).getBegin() < now && now < schedule.get(0).getEnd()){
+                            setSchedule();
+                            startTimer();
                         }
                     }
-                    else if(activity != null){
-                        if(millisRemaining[i] > 0){
+                    String notificationText = "";
+                    String timeLeft;
+                    int hours, minutes, seconds;
+                    for(int i = 1; i < taskCount; i++){
+                        if(active[i]){
+                            millisRemaining[i] -= 1000/divisions;
                             seconds = (int) (millisRemaining[i] / 1000) % 60 ;
                             minutes = (int) ((millisRemaining[i] / (1000*60)) % 60);
                             hours   = (int) (millisRemaining[i] / (1000*60*60));
                             timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
-                            activity.timerTexts[i].setText(timeLeft);
+                            notificationText += taskNames[i] + ": " + timeLeft + System.lineSeparator();
+                            if(activity != null){
+                                activity.timerTexts[i].setText(timeLeft);
+                            }
                         }
-                        else{
-                            activity.timerTexts[i].setText("Complete");
+                        else if(activity != null){
+                            if(millisRemaining[i] > 0){
+                                seconds = (int) (millisRemaining[i] / 1000) % 60 ;
+                                minutes = (int) ((millisRemaining[i] / (1000*60)) % 60);
+                                hours   = (int) (millisRemaining[i] / (1000*60*60));
+                                timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
+                                activity.timerTexts[i].setText(timeLeft);
+                            }
+                            else{
+                                activity.timerTexts[i].setText("Complete");
+                            }
                         }
                     }
+                    mBuilder.setContentText(notificationText);
+                    notificationManager.notify(NOTIFICATION_ID, mBuilder.build());
                 }
-                mBuilder.setContentText(notificationText);
-                notificationManager.notify(NOTIFICATION_ID, mBuilder.build());
-            }
 
-            @Override
-            public void onFinish() {
-                finishedTimer();
-            }
-        };
-        countDownTimer.start();
+                @Override
+                public void onFinish() {
+                    finishedTimer();
+                }
+            };
+            countDownTimer.start();
+        }
     }
 
-    public void attach(ProgressActivity act, boolean[] activeArr){
+    public void attachActive(boolean[] activeArr){
+        active = activeArr;
+    }
+
+    public void attachActivity(ProgressActivity act){
         activity = act;
-        if(activeArr != null){
-            active = activeArr;
-        }
         attached = true;
     }
 

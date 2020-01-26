@@ -71,11 +71,13 @@ public class SleepActivity extends AppCompatActivity {
             Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
             long startMillis = now.getTime();
             long endMillis = startMillis + duration;
+            String endDT = Long.toString(endMillis);
             ContentUris.appendId(builder, startMillis);
             ContentUris.appendId(builder, endMillis);
             Cursor eventCursor = getContentResolver().query(builder.build(), new String[]{CalendarContract.Instances.TITLE,
                             CalendarContract.Instances.BEGIN, CalendarContract.Instances.END, CalendarContract.Instances.DESCRIPTION},
-                    CalendarContract.Instances.OWNER_ACCOUNT + " = ?", new String[]{calendarAccount}, null);
+                    CalendarContract.Instances.OWNER_ACCOUNT + " = ? AND (dtend <= ? OR dtend >= ? AND dtstart <= ?)", new String[]{calendarAccount, endDT, endDT, endDT},  "dtstart ASC");
+            int a = eventCursor.getCount();
             int sum = 0;
             long prevBegin = 0;
             long prevEnd = 0;

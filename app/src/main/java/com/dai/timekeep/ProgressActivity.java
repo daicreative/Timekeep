@@ -1,6 +1,7 @@
 package com.dai.timekeep;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -77,10 +78,6 @@ public class ProgressActivity extends AppCompatActivity implements ProgressAdapa
         active = new boolean[taskNames.length];
         active[1] = true;
 
-        recyclerSetup();
-
-        textViewSetup();
-
         //Set up service
         Intent serviceIntent = new Intent(this, TimerService.class);
         serviceIntent.putExtras(old);
@@ -139,19 +136,21 @@ public class ProgressActivity extends AppCompatActivity implements ProgressAdapa
     private void bindToService(TimerService service) {
         if(service.beenAttached()){
             //get the info needed - service has been running
-            sharedPreferences = getSharedPreferences(getString(R.string.sharedPrefs), MODE_PRIVATE);
             taskNames = service.getTaskNames();
             active = service.getActive();
             recyclerSetup();
             textViewSetup();
-            service.attach(this, null);
+            service.attachActivity(this);
         }
         else{
             //give info needed - service just started
-            service.attach(this, active);
+            service.attachActive(active);
             List<SchedulePair> schedule = (List<SchedulePair>) getIntent().getSerializableExtra(getString(R.string.scheduleExtra));
             service.loadSchedule(schedule);
-            service.startTimer();
+            recyclerSetup();
+            textViewSetup();
+            service.attachActivity(this);
+            service.startTimer(); //Main starting point, service in full motion
         }
     }
 
@@ -189,4 +188,5 @@ public class ProgressActivity extends AppCompatActivity implements ProgressAdapa
     public void changeAt(int timerIndex) {
         mAdapter.notifyItemChanged(timerIndex);
     }
+    public void notifyChange() { mAdapter.notifyDataSetChanged(); }
 }
