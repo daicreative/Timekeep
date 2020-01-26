@@ -71,7 +71,7 @@ public class TimerService extends Service {
         this.schedule = schedule;
         millisRemaining[0] = getScheduleTotalTime();
         long now = (new Date()).getTime();
-        if(schedule.get(0).getBegin() <= now){
+        if(!schedule.isEmpty() && schedule.get(0).getBegin() <= now){
             //end schedule if in one
             setSchedule();
         }
@@ -89,15 +89,16 @@ public class TimerService extends Service {
     private void updateScheduleTotalTime() {
         long sum = 0;
         long now = (new Date()).getTime();
-        for(SchedulePair pair : schedule){
-            if(pair.getEnd() < now){
-                schedule.remove(pair);
+        for(int i = 0; i < schedule.size(); i++){
+            if(schedule.get(i).getEnd() < now){
+                schedule.remove(i);
+                i--;
             }
-            else if(pair.getBegin() < now){
-                sum += pair.getEnd() - now;
+            else if(schedule.get(i).getBegin() < now){
+                sum += schedule.get(i).getEnd() - now;
             }
             else{
-                sum += pair.getEnd() - pair.getBegin();
+                sum += schedule.get(i).getEnd() - schedule.get(i).getBegin();
             }
         }
         millisRemaining[0] = sum;
@@ -203,8 +204,8 @@ public class TimerService extends Service {
         else{
             //out of current event
             long timeAfterEventEnd = now - currentEvent.getEnd();
+            currentEvent = getCurrentEvent();
             millisRemaining[0] = getScheduleTotalTime();
-            currentEvent = null;
             int firstAlive = getFirstAlive();
             if(firstAlive == -1){
                 //totally done
@@ -224,9 +225,9 @@ public class TimerService extends Service {
             long now = (new Date()).getTime();
             if(now > schedule.get(0).getBegin()){
                 //we entered an event during sleep
-                currentEvent = schedule.remove(0);
-                sleepAfterEvent = now - currentEvent.getBegin();
+                sleepAfterEvent = now - schedule.get(0).getBegin();
                 sleepLength = sleepLength - sleepAfterEvent;
+                currentEvent = schedule.remove(0);
             }
         }
         long sleepLeft = 0;
@@ -291,12 +292,14 @@ public class TimerService extends Service {
 
     private void finishedTimer() {
         active[timerIndex] = false;
-        if(timerIndex == 0){
+        if(timerIndex != 0){
             millisRemaining[timerIndex] = 0;
             if(activity != null){
-                activity.changeAt(timerIndex);
                 activity.timerTexts[timerIndex].setText("Complete");
             }
+        }
+        if(activity != null){
+            activity.changeAt(timerIndex);
         }
 
         int activeCount = 0;
@@ -367,7 +370,7 @@ public class TimerService extends Service {
         if(active[0] == true){
             divisions = 1;
             timerIndex = 0;
-            currentEvent = schedule.remove(0);
+            currentEvent = getCurrentEvent();
             Date endDate = new Date(currentEvent.getEnd());
             final String endTime = " (End " + endDate.getHours()%12 + ":" + String.format("%1$02d" , endDate.getMinutes()) + ")";
             countDownTimer = new CountDownTimer((int) (currentEvent.getEnd() - currentEvent.getBegin()), 1000) {
@@ -385,6 +388,18 @@ public class TimerService extends Service {
                     notificationText += taskNames[0] + endTime + ": " + timeLeft + System.lineSeparator();
                     if(activity != null){
                         activity.timerTexts[0].setText(timeLeft);
+                        for(int i = 1; i < taskCount; i++){
+                            if(millisRemaining[i] > 0){
+                                seconds = (int) (millisRemaining[i] / 1000) % 60 ;
+                                minutes = (int) ((millisRemaining[i] / (1000*60)) % 60);
+                                hours   = (int) (millisRemaining[i] / (1000*60*60));
+                                timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
+                                activity.timerTexts[i].setText(timeLeft);
+                            }
+                            else{
+                                activity.timerTexts[i].setText("Complete");
+                            }
+                        }
                     }
                     mBuilder.setContentText(notificationText);
                     notificationManager.notify(NOTIFICATION_ID, mBuilder.build());
@@ -408,6 +423,10 @@ public class TimerService extends Service {
                     }
                 }
             }
+            int sSeconds = (int) (millisRemaining[0] / 1000) % 60 ;
+            int sMinutes = (int) ((millisRemaining[0] / (1000*60)) % 60);
+            int sHours   = (int) (millisRemaining[0] / (1000*60*60));
+            final String scheduleString = sHours + ":" + String.format("%1$02d" , sMinutes) + ":" + String.format("%1$02d" , sSeconds);
 
             countDownTimer = new CountDownTimer((int) millisRemaining[timerIndex] * divisions, 1000) {
                 @Override
@@ -419,6 +438,9 @@ public class TimerService extends Service {
                             setSchedule();
                             startTimer();
                         }
+                    }
+                    if(activity != null && activity.timerTexts[0] != null){
+                        activity.timerTexts[0].setText(scheduleString);
                     }
                     String notificationText = "";
                     String timeLeft;
@@ -482,5 +504,19 @@ public class TimerService extends Service {
         detach();
         countDownTimer.cancel();
         stopSelf();
+    }
+
+    private SchedulePair getCurrentEvent(){
+        long now = (new Date()).getTime();
+        for(int i = 0; i < schedule.size(); i++){
+            if(schedule.get(i).getEnd() < now){
+                schedule.remove(i);
+                i--;
+            }
+            else if(schedule.get(i).getBegin() <= now && now <= schedule.get(i).getEnd()){
+                return schedule.get(i);
+            }
+        }
+        return null;
     }
 }

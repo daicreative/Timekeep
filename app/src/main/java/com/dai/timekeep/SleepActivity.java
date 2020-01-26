@@ -56,28 +56,35 @@ public class SleepActivity extends AppCompatActivity {
 
     public void divide(View view) {
         Date now = new Date();
-        int nowMinutes = now.getHours() * 60 + now.getMinutes();
-        int thenMinutes = tp.getHour() * 60 + tp.getMinute();
+
         SharedPreferences.Editor editor = sharedPreferences.edit();
         editor.putInt(getString(R.string.sleepHourKey), tp.getHour());
         editor.putInt(getString(R.string.sleepMinuteKey), tp.getMinute());
         editor.commit();
-        int duration = (24*60 + thenMinutes - nowMinutes)%(24*60);
-        duration *=  60 * 1000; //minutes to milliseconds
 
+        Date future = new Date(now.getTime());
+        future.setHours(tp.getHour());
+        future.setMinutes(tp.getMinute());
+        future.setSeconds(0);
+        if(future.getTime() < now.getTime()){
+            Calendar c = Calendar.getInstance();
+            c.setTime(future);
+            c.add(Calendar.DATE, 1);
+            future = c.getTime();
+        }
+        int duration = (int) (future.getTime() - now.getTime());
         LinkedList<SchedulePair> schedule = new LinkedList<>();
         if(sharedPreferences.contains(getString(R.string.calendarAccountKey))){
             String calendarAccount = sharedPreferences.getString(getString(R.string.calendarAccountKey), "");
             Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
             long startMillis = now.getTime();
-            long endMillis = startMillis + duration;
+            long endMillis = future.getTime();
             String endDT = Long.toString(endMillis);
             ContentUris.appendId(builder, startMillis);
             ContentUris.appendId(builder, endMillis);
             Cursor eventCursor = getContentResolver().query(builder.build(), new String[]{CalendarContract.Instances.TITLE,
                             CalendarContract.Instances.BEGIN, CalendarContract.Instances.END, CalendarContract.Instances.DESCRIPTION},
                     CalendarContract.Instances.OWNER_ACCOUNT + " = ? AND (dtend <= ? OR dtend >= ? AND dtstart <= ?)", new String[]{calendarAccount, endDT, endDT, endDT},  "dtstart ASC");
-            int a = eventCursor.getCount();
             int sum = 0;
             long prevBegin = 0;
             long prevEnd = 0;
