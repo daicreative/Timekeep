@@ -20,7 +20,9 @@ import android.widget.TextView;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class CalendarActivity extends AppCompatActivity implements CalendarAdapter.OnCalListener {
 
@@ -29,7 +31,6 @@ public class CalendarActivity extends AppCompatActivity implements CalendarAdapt
     private SharedPreferences sharedPreferences;
     private SharedPreferences.Editor editor;
     private String[] calendarNames;
-    private int[] calendarIds;
     private MutableInteger selectedIndex;
 
     protected void onStart() {
@@ -66,12 +67,12 @@ public class CalendarActivity extends AppCompatActivity implements CalendarAdapt
     private void setupList() {
         recyclerView = findViewById(R.id.calendarList);
         recyclerView.setHasFixedSize(true);
-        selectedIndex = new MutableInteger(calendarNames.length - 1);
-        if(sharedPreferences.contains(getString(R.string.calendarIdKey))){
+        selectedIndex = new MutableInteger(0);
+        if(sharedPreferences.contains(getString(R.string.calendarAccountKey))){
             //find cal index with id
-            int chosenID = sharedPreferences.getInt(getString(R.string.calendarIdKey), -1);
-            for(int i = 0; i < calendarIds.length; i++){
-                if(calendarIds[i] == chosenID){
+            String chosenAccount = sharedPreferences.getString(getString(R.string.calendarAccountKey), "None");
+            for(int i = 0; i < calendarNames.length; i++){
+                if(calendarNames[i].equals(chosenAccount)){
                     selectedIndex.value = i;
                 }
             }
@@ -85,20 +86,19 @@ public class CalendarActivity extends AppCompatActivity implements CalendarAdapt
         Cursor cursor;
 
         cursor = getContentResolver().query(Uri.parse("content://com.android.calendar/calendars"),
-                new String[] { "_id", "calendar_displayName" }, null, null, null);
+                new String[] {CalendarContract.Calendars.ACCOUNT_NAME }, null, null, null);
 
         // Get calendars name
         if (cursor.getCount() > 0) {
             cursor.moveToFirst();
-            calendarNames = new String[cursor.getCount() + 1];
-            calendarNames[calendarNames.length - 1] = "None";
-            // Get calendars id
-            calendarIds = new int[cursor.getCount()];
+            Set<String> accounts = new HashSet<>();
             for (int i = 0; i < cursor.getCount(); i++) {
-                calendarIds[i] = cursor.getInt(0);
-                calendarNames[i] = cursor.getString(1);
+                accounts.add(cursor.getString(0));
                 cursor.moveToNext();
             }
+            calendarNames = new String[accounts.size() + 1];
+            calendarNames[0] = "None";
+            System.arraycopy(accounts.toArray(), 0, calendarNames, 1, calendarNames.length - 1);
         }
     }
 
@@ -107,12 +107,12 @@ public class CalendarActivity extends AppCompatActivity implements CalendarAdapt
         if(position == selectedIndex.value){
             return;
         }
-        if(position == calendarNames.length - 1){
-            editor.remove(getString(R.string.calendarIdKey));
+        if(position == 0){
+            editor.remove(getString(R.string.calendarAccountKey));
             editor.commit();
         }
         else{
-            editor.putInt(getString(R.string.calendarIdKey), calendarIds[position]);
+            editor.putString(getString(R.string.calendarAccountKey), calendarNames[position]);
             editor.commit();
         }
         int old = selectedIndex.value;

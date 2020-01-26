@@ -16,6 +16,7 @@ import android.os.Environment;
 import android.os.StrictMode;
 import android.provider.MediaStore;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -95,6 +96,8 @@ public class TaskActivity extends AppCompatActivity implements MyAdapter.OnTaskL
                 });
         AlertDialog alert = dialogBuilder.create();
         alert.setTitle("Add Task");
+        alert.getWindow().setSoftInputMode(
+                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
         alert.show();
 
     }

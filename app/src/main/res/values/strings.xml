@@ -5,7 +5,7 @@
     <string name="finalString">begin</string>
     <string name="sharedPrefs">timekeep</string>
     <string name="lastSleepTimeKey">lastSleep</string>
-    <string name="calendarIdKey">calendar</string>
+    <string name="calendarAccountKey">calendar</string>
     <string name="taskBooleanExtra">selecting</string>
     <string name="taskSleepLengthExtra">sleepLength</string>
     <string name="percentLeftExtra">percentLeft</string>

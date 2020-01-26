@@ -66,8 +66,8 @@ public class SleepActivity extends AppCompatActivity {
         duration *=  60 * 1000; //minutes to milliseconds
 
         LinkedList<SchedulePair> schedule = new LinkedList<>();
-        if(sharedPreferences.contains(getString(R.string.calendarIdKey))){
-            int calendarID = sharedPreferences.getInt(getString(R.string.calendarIdKey), 0);
+        if(sharedPreferences.contains(getString(R.string.calendarAccountKey))){
+            String calendarAccount = sharedPreferences.getString(getString(R.string.calendarAccountKey), "");
             Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
             long startMillis = now.getTime();
             long endMillis = startMillis + duration;
@@ -75,7 +75,7 @@ public class SleepActivity extends AppCompatActivity {
             ContentUris.appendId(builder, endMillis);
             Cursor eventCursor = getContentResolver().query(builder.build(), new String[]{CalendarContract.Instances.TITLE,
                             CalendarContract.Instances.BEGIN, CalendarContract.Instances.END, CalendarContract.Instances.DESCRIPTION},
-                    CalendarContract.Instances.CALENDAR_ID + " = ?", new String[]{Integer.toString(calendarID)}, null);
+                    CalendarContract.Instances.OWNER_ACCOUNT + " = ?", new String[]{calendarAccount}, null);
             int sum = 0;
             long prevBegin = 0;
             long prevEnd = 0;
