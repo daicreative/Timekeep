@@ -301,7 +301,7 @@ public class TimerService extends Service {
         if(activity != null){
             activity.changeAt(timerIndex);
         }
-
+        currentEvent = getCurrentEvent(); //Clears out schedule if needed
         int activeCount = 0;
         int firstAlive = -1;
         for(int i = 1; i < taskCount; i++){
