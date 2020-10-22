@@ -20,12 +20,11 @@
         app:layout_constraintVertical_bias="0.25" />
 
     <Button
-        android:id="@+id/keepButton"
+        android:id="@+id/wheelButton"
         style="?android:attr/borderlessButtonStyle"
         android:layout_width="198dp"
         android:layout_height="78dp"
         android:background="@drawable/border"
-        android:onClick="allocate"
         android:text="set"
         android:textAppearance="@style/TextAppearance.AppCompat.Body1"
         android:textColor="@color/colorPrimary"
@@ -35,6 +34,6 @@
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="@id/allocater"
-        app:layout_constraintVertical_bias="0.7" />
+        app:layout_constraintVertical_bias="0.85" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

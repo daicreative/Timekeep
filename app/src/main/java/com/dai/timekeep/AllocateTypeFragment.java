@@ -3,16 +3,24 @@ package com.dai.timekeep;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+
+import android.content.Context;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 
 public class AllocateTypeFragment extends Fragment {
     public AllocateTypeFragment(){}
+
+    private OnAllocateTypeListener mListener;
+
+    private EditText hourEdit;
+    private EditText minuteEdit;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -24,15 +32,17 @@ public class AllocateTypeFragment extends Fragment {
                              ViewGroup container,
                              Bundle savedInstanceState) {
         View v = inflater.inflate(R.layout.allocate_type, container, false);
-        final EditText editText = (EditText)v.findViewById(R.id.hourEdit);
-        editText.setSelection(editText.getText().length());
-        editText.setOnClickListener(new View.OnClickListener() {
+
+        //Set up formatting for the timer text
+        hourEdit = (EditText)v.findViewById(R.id.hourEdit);
+        hourEdit.setSelection(hourEdit.getText().length());
+        hourEdit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                editText.setSelection(editText.getText().length());
+                hourEdit.setSelection(hourEdit.getText().length());
             }
         });
-        editText.addTextChangedListener(new TextWatcher() {
+        hourEdit.addTextChangedListener(new TextWatcher() {
             private boolean mSelfChange = false;
 
             @Override
@@ -76,15 +86,15 @@ public class AllocateTypeFragment extends Fragment {
             }
         });
 
-        final EditText editText2 = (EditText)v.findViewById(R.id.minuteEdit);
-        editText2.setSelection(editText2.getText().length());
-        editText2.setOnClickListener(new View.OnClickListener() {
+        minuteEdit = (EditText)v.findViewById(R.id.minuteEdit);
+        minuteEdit.setSelection(minuteEdit.getText().length());
+        minuteEdit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                editText2.setSelection(editText2.getText().length());
+                minuteEdit.setSelection(minuteEdit.getText().length());
             }
         });
-        editText2.addTextChangedListener(new TextWatcher() {
+        minuteEdit.addTextChangedListener(new TextWatcher() {
             private boolean mSelfChange = false;
 
             @Override
@@ -127,13 +137,48 @@ public class AllocateTypeFragment extends Fragment {
 
             }
         });
+
+        //Set up Button
+        Button button = v.findViewById(R.id.typeButton);
+        button.setOnClickListener(new View.OnClickListener()
+        {
+            @Override
+            public void onClick(View v)
+            {
+                allocateTypeButton(v);
+            }
+        });
         return v;
     }
 
     @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        if (context instanceof OnAllocateTypeListener) {
+            mListener = (OnAllocateTypeListener) context;
+        } else {
+            throw new RuntimeException(context.toString()
+                    + " must implement OnFragmentInteractionListener");
+        }
     }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        mListener = null;
+    }
+    
+    public void allocateTypeButton(View view){
+        if(mListener != null){
+            int hour = Integer.parseInt(hourEdit.getText().toString());
+            int minute = Integer.parseInt(minuteEdit.getText().toString());
+            mListener.onAllocateTypeButton(hour * 60 + minute);
+        }
+    }
+
+    public interface OnAllocateTypeListener {
+        void onAllocateTypeButton(int duration);
+    }
+
 }
 

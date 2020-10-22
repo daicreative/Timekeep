@@ -16,7 +16,7 @@ import com.google.android.material.tabs.TabLayout;
 
 import java.util.HashMap;
 
-public class AllocateActivity extends AppCompatActivity {
+public class AllocateActivity extends AppCompatActivity implements AllocateTypeFragment.OnAllocateTypeListener, AllocateWheelFragment.OnAllocateWheelListener {
     //Tabs
     AllocatePagerAdapater allocatePagerAdapater;
     ViewPager viewPager;
@@ -64,18 +64,6 @@ public class AllocateActivity extends AppCompatActivity {
         TextView text = findViewById(R.id.taskName);
         text.setText(taskName);
 
-        percentChosen = 5;
-        numberOfPercents = (int) Math.ceil((double) percentLeft/5); //why do you scroll down, just reverse the order Android guys
-        //np
-//        np.setMinValue(1);
-//        np.setMaxValue(numberOfPercents);
-//        np.setWrapSelectorWheel(false);
-//        np.setValue(numberOfPercents);
-//        np.setOnValueChangedListener(onValueChangeListener);
-//        np.setFormatter(formatter);
-//
-//        allocateTyper = findViewById((R.id.allocaterType));
-
     }
 
     NumberPicker.OnValueChangeListener onValueChangeListener =
@@ -103,36 +91,6 @@ public class AllocateActivity extends AppCompatActivity {
         }
     };
 
-    public void allocate(View view) {
-        Intent i1 = new Intent();
-        i1.putExtras(getIntent());
-        allocation.put(taskName, percentChosen);
-        i1.putExtra(getString(R.string.allocationMapExtra), allocation);
-        i1.putExtra(getString(R.string.percentLeftExtra), percentLeft - percentChosen);
-        if(percentChosen == percentLeft){
-            i1.setClass(this, OrderActivity.class);
-        }
-        else{
-            i1.setClass(this, TaskActivity.class);
-        }
-        startActivity(i1);
-    }
-
-    public void allocateType(View view) {
-        Intent i1 = new Intent();
-        i1.putExtras(getIntent());
-        allocation.put(taskName, percentChosen);
-        i1.putExtra(getString(R.string.allocationMapExtra), allocation);
-        i1.putExtra(getString(R.string.percentLeftExtra), percentLeft - percentChosen);
-        if(percentChosen == percentLeft){
-            i1.setClass(this, OrderActivity.class);
-        }
-        else{
-            i1.setClass(this, TaskActivity.class);
-        }
-        startActivity(i1);
-    }
-
     private void setPagerAdapter(){
         allocatePagerAdapater = new AllocatePagerAdapater(getSupportFragmentManager());
         viewPager.setAdapter(allocatePagerAdapater);
@@ -144,4 +102,47 @@ public class AllocateActivity extends AppCompatActivity {
         tabLayout.getTabAt(1).setText("Type");
     }
 
+    @Override
+    public void onAllocateTypeButton(int duration) {
+        Intent i1 = new Intent();
+        i1.putExtras(getIntent());
+        allocation.put(taskName, percentChosen);
+        i1.putExtra(getString(R.string.allocationMapExtra), allocation);
+        i1.putExtra(getString(R.string.percentLeftExtra), percentLeft - percentChosen);
+        if(percentChosen == percentLeft){
+            i1.setClass(this, OrderActivity.class);
+        }
+        else{
+            i1.setClass(this, TaskActivity.class);
+        }
+        startActivity(i1);
+    }
+
+    @Override
+    public void onAllocateWheelButton() {
+        Intent i1 = new Intent();
+        i1.putExtras(getIntent());
+        allocation.put(taskName, percentChosen);
+        i1.putExtra(getString(R.string.allocationMapExtra), allocation);
+        i1.putExtra(getString(R.string.percentLeftExtra), percentLeft - percentChosen);
+        if(percentChosen == percentLeft){
+            i1.setClass(this, OrderActivity.class);
+        }
+        else{
+            i1.setClass(this, TaskActivity.class);
+        }
+        startActivity(i1);
+    }
+
+    @Override
+    public void SetupNumberPicker(NumberPicker np) {
+        percentChosen = 5;
+        numberOfPercents = (int) Math.ceil((double) percentLeft/5); //why do you scroll down, just reverse the order Android guys
+        np.setMinValue(1);
+        np.setMaxValue(numberOfPercents);
+        np.setWrapSelectorWheel(false);
+        np.setValue(numberOfPercents);
+        np.setOnValueChangedListener(onValueChangeListener);
+        np.setFormatter(formatter);
+    }
 }
