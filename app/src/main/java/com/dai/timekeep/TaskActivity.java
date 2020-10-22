@@ -129,7 +129,7 @@ public class TaskActivity extends AppCompatActivity implements MyAdapter.OnTaskL
             Intent i1 = new Intent(this, AllocateActivity.class);
             Intent old = getIntent();
             i1.putExtras(old);
-            int percentLeft = old.getIntExtra(getString(R.string.percentLeftExtra), 100);
+            float percentLeft = old.getFloatExtra(getString(R.string.percentLeftExtra), 100);
             i1.putExtra(getString(R.string.taskNameExtra), taskName);
             i1.putExtra(getString(R.string.percentLeftExtra), percentLeft);
             startActivity(i1);

@@ -1,10 +1,16 @@
 package com.dai.timekeep;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
 
+import android.Manifest;
+import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -75,14 +81,18 @@ public class SleepActivity extends AppCompatActivity {
         int duration = (int) (future.getTime() - now.getTime());
         LinkedList<SchedulePair> schedule = new LinkedList<>();
         if(sharedPreferences.contains(getString(R.string.calendarAccountKey))){
+            //get calendar info
             String calendarAccount = sharedPreferences.getString(getString(R.string.calendarAccountKey), "");
+            ContentResolver cr = getContentResolver();
+
+            //getting the busy times from the calendar
             Uri.Builder builder = CalendarContract.Instances.CONTENT_URI.buildUpon();
             long startMillis = now.getTime();
             long endMillis = future.getTime();
             String endDT = Long.toString(endMillis);
             ContentUris.appendId(builder, startMillis);
             ContentUris.appendId(builder, endMillis);
-            Cursor eventCursor = getContentResolver().query(builder.build(), new String[]{CalendarContract.Instances.TITLE,
+            Cursor eventCursor = cr.query(builder.build(), new String[]{CalendarContract.Instances.TITLE,
                             CalendarContract.Instances.BEGIN, CalendarContract.Instances.END, CalendarContract.Instances.DESCRIPTION},
                     CalendarContract.Instances.OWNER_ACCOUNT + " = ? AND (dtend <= ? OR dtend >= ? AND dtstart <= ?)", new String[]{calendarAccount, endDT, endDT, endDT},  "dtstart ASC");
             int sum = 0;
