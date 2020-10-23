@@ -92,9 +92,10 @@ public class SleepActivity extends AppCompatActivity {
             String endDT = Long.toString(endMillis);
             ContentUris.appendId(builder, startMillis);
             ContentUris.appendId(builder, endMillis);
+
             Cursor eventCursor = cr.query(builder.build(), new String[]{CalendarContract.Instances.TITLE,
                             CalendarContract.Instances.BEGIN, CalendarContract.Instances.END, CalendarContract.Instances.DESCRIPTION},
-                    CalendarContract.Instances.OWNER_ACCOUNT + " = ? AND (dtend <= ? OR dtend >= ? AND dtstart <= ?)", new String[]{calendarAccount, endDT, endDT, endDT},  "dtstart ASC");
+                    CalendarContract.Instances.OWNER_ACCOUNT + " = ? AND (" + CalendarContract.Instances.BEGIN + " <= ? OR " + CalendarContract.Instances.END + " >= ? AND " + CalendarContract.Instances.BEGIN + " <= ?)", new String[]{calendarAccount, endDT, endDT, endDT},  CalendarContract.Instances.BEGIN + " ASC");
             int sum = 0;
             long prevBegin = 0;
             long prevEnd = 0;
