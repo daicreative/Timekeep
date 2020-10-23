@@ -54,8 +54,6 @@
             android:cursorVisible="false"
             android:ems="10"
             android:inputType="number"
-            android:maxLength="2"
-            android:maxLines="1"
             android:text="00"
             android:textAlignment="viewStart"
             android:textColor="@color/colorPrimary"

@@ -135,12 +135,12 @@ public class TimerService extends Service {
         System.arraycopy(tempNames, 0, taskNames, 1, tempNames.length);
         taskCount = taskNames.length;
         active = new boolean[taskCount];
-        HashMap<String, Integer> map = (HashMap<String, Integer>) intent.getSerializableExtra(getString(R.string.allocationMapExtra));
+        HashMap<String, Float> map = (HashMap<String, Float>) intent.getSerializableExtra(getString(R.string.allocationMapExtra));
 
         int totalDuration = intent.getIntExtra(getString(R.string.taskSleepLengthExtra), 0);
         millisRemaining = new long[taskCount];
         for(int i = 1; i < taskCount; i++){
-            millisRemaining[i] = (long) (totalDuration * ((float) map.get(taskNames[i]))/100);
+            millisRemaining[i] = (long) (totalDuration * (map.get(taskNames[i]))/100);
         }
 
         //Prep broadcast receiver for screen locking

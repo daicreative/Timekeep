@@ -7,10 +7,12 @@ import androidx.viewpager.widget.ViewPager;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.NumberPicker;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.material.tabs.TabLayout;
 
@@ -104,12 +106,18 @@ public class AllocateActivity extends AppCompatActivity implements AllocateTypeF
 
     @Override
     public void onAllocateTypeButton(int duration) {
+        float percent = (float) duration / totalDuration;
+        percent *= 100;
+        if(percent > percentLeft || duration == 0){
+            Toast.makeText(getApplicationContext(),"Invalid duration!",Toast.LENGTH_SHORT).show();
+            return;
+        }
         Intent i1 = new Intent();
         i1.putExtras(getIntent());
-        allocation.put(taskName, percentChosen);
+        allocation.put(taskName, percent);
         i1.putExtra(getString(R.string.allocationMapExtra), allocation);
-        i1.putExtra(getString(R.string.percentLeftExtra), percentLeft - percentChosen);
-        if(percentChosen == percentLeft){
+        i1.putExtra(getString(R.string.percentLeftExtra), percentLeft - percent);
+        if(percent == percentLeft){
             i1.setClass(this, OrderActivity.class);
         }
         else{

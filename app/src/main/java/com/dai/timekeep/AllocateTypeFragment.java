@@ -8,6 +8,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -100,7 +101,6 @@ public class AllocateTypeFragment extends Fragment {
             @Override
             public void afterTextChanged(Editable s) {
                 if(mSelfChange) return;
-
                 String edit = s.toString();
                 int minute = Integer.parseInt(edit);
                 if(edit.length() == 1){
@@ -172,7 +172,7 @@ public class AllocateTypeFragment extends Fragment {
         if(mListener != null){
             int hour = Integer.parseInt(hourEdit.getText().toString());
             int minute = Integer.parseInt(minuteEdit.getText().toString());
-            mListener.onAllocateTypeButton(hour * 60 + minute);
+            mListener.onAllocateTypeButton((hour * 60 + minute) * 60 * 1000);
         }
     }
 
