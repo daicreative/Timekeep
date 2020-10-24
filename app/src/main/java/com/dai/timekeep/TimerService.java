@@ -463,10 +463,14 @@ public class TimerService extends Service {
                                 minutes = (int) ((millisRemaining[i] / (1000*60)) % 60);
                                 hours   = (int) (millisRemaining[i] / (1000*60*60));
                                 timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
-                                activity.timerTexts[i].setText(timeLeft);
+                                if(activity != null && activity.timerTexts[i] != null){
+                                    activity.timerTexts[i].setText(timeLeft);
+                                }
                             }
                             else{
-                                activity.timerTexts[i].setText("Complete");
+                                if(activity != null && activity.timerTexts[i] != null){
+                                    activity.timerTexts[i].setText("Complete");
+                                }
                             }
                         }
                     }
