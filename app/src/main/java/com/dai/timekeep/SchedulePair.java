@@ -11,6 +11,8 @@ public class SchedulePair implements Serializable {
         this.end = end;
     }
 
+    public boolean inSchedule(long time){ return time >= begin && time < end; }
+
     public long getBegin(){
         return begin;
     }

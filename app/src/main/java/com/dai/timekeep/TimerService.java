@@ -16,9 +16,10 @@ import android.os.IBinder;
 
 import androidx.core.app.NotificationCompat;
 
+import java.text.Normalizer;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 
 public class TimerService extends Service {
@@ -29,12 +30,11 @@ public class TimerService extends Service {
     private final int NOTIFICATION_ID2 = 1235;
 
 
-    private int divisions;
     private String[] taskNames;
     private boolean[] active;
     private long[] millisRemaining;
     private int taskCount;
-    private int timerIndex;
+    private long finalEndTime;
 
     private CountDownTimer countDownTimer;
     private NotificationCompat.Builder mBuilder;
@@ -47,8 +47,7 @@ public class TimerService extends Service {
     private long screenCloseTime;
 
     private List<SchedulePair> schedule;
-    private SchedulePair currentEvent = null;
-
+    private long lastTick;
 
     @Override
     public void onCreate() {
@@ -69,39 +68,16 @@ public class TimerService extends Service {
 
     public void loadSchedule(List<SchedulePair> schedule) {
         this.schedule = schedule;
-        millisRemaining[0] = getScheduleTotalTime();
-        long now = (new Date()).getTime();
-        if(!schedule.isEmpty() && schedule.get(0).getBegin() <= now){
-            //end schedule if in one
-            setSchedule();
-        }
     }
 
     private long getScheduleTotalTime() {
-        //assumes not in range
+        //assumes no overlap
         long sum = 0;
+        long now = System.currentTimeMillis();
         for(SchedulePair pair : schedule){
-            sum += pair.getEnd() - pair.getBegin();
+            sum += pair.getEnd() - Math.max(pair.getBegin(), now);
         }
         return sum;
-    }
-
-    private void updateScheduleTotalTime() {
-        long sum = 0;
-        long now = (new Date()).getTime();
-        for(int i = 0; i < schedule.size(); i++){
-            if(schedule.get(i).getEnd() < now){
-                schedule.remove(i);
-                i--;
-            }
-            else if(schedule.get(i).getBegin() < now){
-                sum += schedule.get(i).getEnd() - now;
-            }
-            else{
-                sum += schedule.get(i).getEnd() - schedule.get(i).getBegin();
-            }
-        }
-        millisRemaining[0] = sum;
     }
 
     public class TimerBinder extends Binder {
@@ -120,6 +96,8 @@ public class TimerService extends Service {
         }
     }
 
+
+
     @Override
     public IBinder onBind(Intent intent) {
         return binder;
@@ -132,6 +110,7 @@ public class TimerService extends Service {
         String[] tempNames = intent.getStringArrayExtra(getString(R.string.taskOrderExtra));
         taskNames = new String[tempNames.length + 1];
         taskNames[0] = "Schedule";
+
         System.arraycopy(tempNames, 0, taskNames, 1, tempNames.length);
         taskCount = taskNames.length;
         active = new boolean[taskCount];
@@ -154,13 +133,7 @@ public class TimerService extends Service {
                     countDownTimer.cancel();
                 }
                 else if(strAction.equals(Intent.ACTION_SCREEN_ON)){
-                    screenCloseTime = System.currentTimeMillis() - screenCloseTime;
-                    if(active[0] == true){
-                        handleSleepWithSchedule(screenCloseTime);
-                    }
-                    else{
-                        handleSleep(screenCloseTime);
-                    }
+                    handleSleep(screenCloseTime, System.currentTimeMillis());
                 }
             }
         };
@@ -191,54 +164,17 @@ public class TimerService extends Service {
             notificationManager.notify(NOTIFICATION_ID, mBuilder.build());
         }
 
-        return START_STICKY;
+        return START_NOT_STICKY;
     }
 
-    private void handleSleepWithSchedule(long screenCloseTime) {
-        long now = (new Date()).getTime();
-        if(now < currentEvent.getEnd()){
-            //still in current event
-            millisRemaining[0] = getScheduleTotalTime() + (currentEvent.getEnd() - now);
-            startTimer();
-        }
-        else{
-            //out of current event
-            long timeAfterEventEnd = now - currentEvent.getEnd();
-            currentEvent = getCurrentEvent();
-            millisRemaining[0] = getScheduleTotalTime();
-            int firstAlive = getFirstAlive();
-            if(firstAlive == -1){
-                //totally done
-                finishedTimer();
-            }
-            else{
-                active[firstAlive] = true;
-                active[0] = false;
-                handleSleep(timeAfterEventEnd);
-            }
-        }
-    }
-
-    private void handleSleep(long sleepLength) {
-        long sleepAfterEvent = 0;
-        if(!schedule.isEmpty()){
-            long now = (new Date()).getTime();
-            if(now > schedule.get(0).getBegin()){
-                //we entered an event during sleep
-                sleepAfterEvent = now - schedule.get(0).getBegin();
-                sleepLength = sleepLength - sleepAfterEvent;
-                currentEvent = schedule.remove(0);
-            }
-        }
-        long sleepLeft = 0;
-        divisions = 0;
-        for(int i = 1; i < taskCount; i++){
-            if(active[i]){
-                divisions++;
-            }
-        }
+    // For time guaranteed to not be interrupted by schedule
+    private void distributeSleep(long sleepLength) {
+        int divisions = GetDivisions();
         if(divisions == 0){
-            return;
+            int alive = getFirstAlive();
+            if(alive == -1) return;
+            active[getFirstAlive()] = true;
+            divisions = 1;
         }
         long subtracted = sleepLength/divisions;
         for(int i = 1; i < taskCount; i++){
@@ -248,36 +184,39 @@ public class TimerService extends Service {
                 }
                 else{
                     active[i] = false;
-                    if(activity != null){
-                        activity.changeAt(i);
-                        activity.timerTexts[i].setText("Complete");
-                    }
-                    if(divisions == 1){
-                        int firstAlive = getFirstAlive();
-                        if(firstAlive != -1){
-                            active[firstAlive] = true;
-                        }
-                        else if(sleepAfterEvent == 0){
-                            //totally done
-                            timerIndex = i;
-                            finishedTimer(); //fixme can probably separate the ending functionality
-                            return;
-                        }
-                    }
-                    sleepLeft += subtracted - millisRemaining[i];
+                    long sleepLeft = subtracted - millisRemaining[i];
                     millisRemaining[i] = 0;
+                    distributeSleep(sleepLeft);
                 }
             }
         }
-        if(sleepLeft > 0){
-            handleSleep(sleepLeft);
+    }
+
+    private void handleSleep(long timeStart, long timeEnd) {
+
+        if(!schedule.isEmpty() && schedule.get(0).inSchedule(timeStart)){
+            // Sleep started during an event
+            if(schedule.get(0).inSchedule(timeEnd)){
+                // We're still in the event - do nothing
+                startTimer();
+            }
+            else{
+                // Event ended in range
+                long nextStart = schedule.get(0).getEnd();
+                schedule.remove(0);
+                handleSleep(nextStart, timeEnd);
+            }
         }
-        if(sleepAfterEvent > 0){
-            setSchedule();
-            handleSleepWithSchedule(sleepAfterEvent);
+        else if(!schedule.isEmpty() && schedule.get(0).getBegin() < timeEnd){
+            // Can assume it started during sleep
+            distributeSleep(schedule.get(0).getBegin() - timeStart);
+            handleSleep(schedule.get(0).getBegin(), timeEnd);
         }
         else{
-            startTimer();
+            // No schedule in range
+            distributeSleep(timeEnd - timeStart);
+            if(getFirstAlive() != -1) startTimer();
+            else finishedTimer();
         }
     }
 
@@ -291,64 +230,30 @@ public class TimerService extends Service {
     }
 
     private void finishedTimer() {
-        active[timerIndex] = false;
-        if(timerIndex != 0){
-            millisRemaining[timerIndex] = 0;
-            if(activity != null){
-                activity.timerTexts[timerIndex].setText("Complete");
-            }
-        }
-        if(activity != null){
-            activity.changeAt(timerIndex);
-        }
-        currentEvent = getCurrentEvent(); //Clears out schedule if needed
-        int activeCount = 0;
-        int firstAlive = -1;
-        for(int i = 1; i < taskCount; i++){
-            if(active[i]){
-                activeCount++;
-            }
-            if(firstAlive == -1 && millisRemaining[i] > 0){
-                firstAlive = i;
-            }
-        }
-        if(activeCount > 0){
-            startTimer();
-        }
-        else if(firstAlive != -1){
-            active[firstAlive] = true;
-            if(activity != null){
-                activity.changeAt(firstAlive);
-            }
-            startTimer();
-        }
-        else if(!schedule.isEmpty()){
-            updateScheduleTotalTime();
-        }
-        else{
-            //Turn cycle off
-            SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.sharedPrefs), MODE_PRIVATE);
-            SharedPreferences.Editor editor = sharedPreferences.edit();
-            editor.putBoolean(getString(R.string.cycleOnKey), false);
-            editor.commit();
+        // ALL DONE!
+        //Turn cycle off
+        SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.sharedPrefs), MODE_PRIVATE);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putBoolean(getString(R.string.cycleOnKey), false);
+        editor.commit();
 
-            //Notify over
-            mBuilder.setOngoing(false)
-                    .setChannelId("2")
-                    .setAutoCancel(true)
-                    .setContentTitle("All tasks complete!")
-                    .setContentText("Great job!")
-                    .setOnlyAlertOnce(false);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                NotificationChannel channel = new NotificationChannel("2", "Finish", NotificationManager.IMPORTANCE_HIGH);
-                notificationManager.createNotificationChannel(channel);
-            }
-            notificationManager.notify(NOTIFICATION_ID2, mBuilder.build());
-
-            //Kill service
-            notificationManager.cancel(NOTIFICATION_ID);
-            stopSelf();
+        //Notify over
+        mBuilder.setOngoing(false)
+                .setChannelId("2")
+                .setAutoCancel(true)
+                .setContentTitle("All tasks complete!")
+                .setContentText("Great job!")
+                .setOnlyAlertOnce(false);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel("2", "Finish", NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel(channel);
         }
+        notificationManager.notify(NOTIFICATION_ID2, mBuilder.build());
+
+        //Kill service
+        notificationManager.cancel(NOTIFICATION_ID);
+        stopSelf();
+
     }
 
     private void setSchedule(){
@@ -356,44 +261,61 @@ public class TimerService extends Service {
         for(int i = 1; i < active.length; i++){
             active[i] = false;
         }
-        if(activity != null){
-            activity.notifyChange();
-        }
     }
-
-
 
     public void startTimer(){
         if(countDownTimer != null){
             countDownTimer.cancel();
         }
+
+        // Schedule check
+        long now = System.currentTimeMillis();
+        RemovePastEvents(now);
+        millisRemaining[0] = getScheduleTotalTime();
+        if(!schedule.isEmpty() && schedule.get(0).inSchedule(now)){
+            setSchedule();
+        }
+        else{
+            active[0] = false;
+        }
+
         if(active[0] == true){
-            divisions = 1;
-            timerIndex = 0;
-            currentEvent = getCurrentEvent();
-            Date endDate = new Date(currentEvent.getEnd());
+            int divisions = 1;
+
+            if(schedule.isEmpty()){
+                // Error check
+                startTimer();
+                return;
+            }
+
+            Date endDate = new Date(schedule.get(0).getEnd());
             final String endTime = " (End " + endDate.getHours()%12 + ":" + String.format("%1$02d" , endDate.getMinutes()) + ")";
-            countDownTimer = new CountDownTimer((int) (currentEvent.getEnd() - currentEvent.getBegin()), 1000) {
+            lastTick = finalEndTime - System.currentTimeMillis();
+            countDownTimer = new CountDownTimer((int) lastTick, 1000) {
                 
                 @Override
                 public void onTick(long millisUntilFinished) {
+                 /*   long timeElapsed = lastTick - millisUntilFinished;
+                    lastTick = millisUntilFinished;*/
+                    long timeElapsed = 1000;
                     String notificationText = "";
                     String timeLeft;
                     int hours, minutes, seconds;
-                    millisRemaining[0] -= 1000;
-                    seconds = (int) (millisRemaining[0] / 1000) % 60 ;
-                    minutes = (int) ((millisRemaining[0] / (1000*60)) % 60);
-                    hours   = (int) (millisRemaining[0] / (1000*60*60));
-                    timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
+                    millisRemaining[0] = Math.max(0, millisRemaining[0] - timeElapsed);
+
+                    if(schedule.get(0).getEnd() < System.currentTimeMillis()){
+                        startTimer();
+                        return;
+                    }
+
+                    timeLeft = FormatedTime(millisRemaining[0]);
                     notificationText += taskNames[0] + endTime + ": " + timeLeft + System.lineSeparator();
                     if(activity != null){
-                        activity.timerTexts[0].setText(timeLeft);
+                        if(activity.timerTexts[0] != null) activity.timerTexts[0].setText(timeLeft);
                         for(int i = 1; i < taskCount; i++){
+                            if(activity.timerTexts[i] == null) break;
                             if(millisRemaining[i] > 0){
-                                seconds = (int) (millisRemaining[i] / 1000) % 60 ;
-                                minutes = (int) ((millisRemaining[i] / (1000*60)) % 60);
-                                hours   = (int) (millisRemaining[i] / (1000*60*60));
-                                timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
+                                timeLeft = FormatedTime(millisRemaining[i]);
                                 activity.timerTexts[i].setText(timeLeft);
                             }
                             else{
@@ -401,6 +323,7 @@ public class TimerService extends Service {
                             }
                         }
                     }
+                    if(activity != null) activity.notifyChange(); // fixme: might be expensive
                     mBuilder.setContentText(notificationText);
                     notificationManager.notify(NOTIFICATION_ID, mBuilder.build());
                 }
@@ -413,28 +336,30 @@ public class TimerService extends Service {
             countDownTimer.start();
         }
         else{
-            divisions = 0;
-            timerIndex = -1;
-            for(int i = 1; i < taskCount; i++){
-                if(active[i]){
-                    divisions++;
-                    if(timerIndex == -1 || millisRemaining[timerIndex] < millisRemaining[i]){
-                        timerIndex = i;
-                    }
+            int divisions = GetDivisions();
+            if(divisions == 0){
+                int alive = getFirstAlive();
+                if(alive == -1){
+                    // This can happen if the timer finish doesn't occur first
+                    finishedTimer();
+                    return;
                 }
+                active[alive] = true;
+                divisions = 1;
             }
-            int sSeconds = (int) (millisRemaining[0] / 1000) % 60 ;
-            int sMinutes = (int) ((millisRemaining[0] / (1000*60)) % 60);
-            int sHours   = (int) (millisRemaining[0] / (1000*60*60));
-            final String scheduleString = sHours + ":" + String.format("%1$02d" , sMinutes) + ":" + String.format("%1$02d" , sSeconds);
 
-            countDownTimer = new CountDownTimer((int) millisRemaining[timerIndex] * divisions, 1000) {
+            long min = Long.MAX_VALUE;
+            for(int i = 1; i < taskCount; i++){
+                if(active[i] && millisRemaining[i] < min) min = millisRemaining[i];
+            }
+
+            final String scheduleString = FormatedTime(millisRemaining[0]);
+            lastTick = finalEndTime - System.currentTimeMillis();
+            countDownTimer = new CountDownTimer(lastTick, 1000) {
                 @Override
                 public void onTick(long millisUntilFinished) {
                     if(schedule != null && !schedule.isEmpty()){
-                        long now = (new Date()).getTime();
-                        schedule.get(0).getBegin();
-                        if(schedule.get(0).getBegin() < now && now < schedule.get(0).getEnd()){
+                        if(schedule.get(0).getBegin() < System.currentTimeMillis()){
                             setSchedule();
                             startTimer();
                         }
@@ -442,38 +367,36 @@ public class TimerService extends Service {
                     if(activity != null && activity.timerTexts[0] != null){
                         activity.timerTexts[0].setText(scheduleString);
                     }
+
+                    long timeElapsed = 1000;
                     String notificationText = "";
-                    String timeLeft;
-                    int hours, minutes, seconds;
+                    int divisions = GetDivisions();
                     for(int i = 1; i < taskCount; i++){
                         if(active[i]){
-                            millisRemaining[i] -= 1000/divisions;
-                            seconds = (int) (millisRemaining[i] / 1000) % 60 ;
-                            minutes = (int) ((millisRemaining[i] / (1000*60)) % 60);
-                            hours   = (int) (millisRemaining[i] / (1000*60*60));
-                            timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
+                            millisRemaining[i] = Math.max(0, millisRemaining[i] - timeElapsed/divisions);
+
+                            if(millisRemaining[i] == 0){
+                                startTimer();
+                                return;
+                            }
+
+                            String timeLeft = FormatedTime(millisRemaining[i]);
                             notificationText += taskNames[i] + ": " + timeLeft + System.lineSeparator();
                             if(activity != null && activity.timerTexts[i] != null){
                                 activity.timerTexts[i].setText(timeLeft);
                             }
                         }
-                        else if(activity != null){
+                        else if(activity != null && activity.timerTexts[i] != null){
                             if(millisRemaining[i] > 0){
-                                seconds = (int) (millisRemaining[i] / 1000) % 60 ;
-                                minutes = (int) ((millisRemaining[i] / (1000*60)) % 60);
-                                hours   = (int) (millisRemaining[i] / (1000*60*60));
-                                timeLeft = hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
-                                if(activity != null && activity.timerTexts[i] != null){
-                                    activity.timerTexts[i].setText(timeLeft);
-                                }
+                                activity.timerTexts[i].setText(FormatedTime(millisRemaining[i]));
                             }
                             else{
-                                if(activity != null && activity.timerTexts[i] != null){
-                                    activity.timerTexts[i].setText("Complete");
-                                }
+                                activity.timerTexts[i].setText("Complete");
                             }
                         }
                     }
+
+                    //if(activity != null) activity.notifyChange(); // fixme: might be expensive
                     mBuilder.setContentText(notificationText);
                     notificationManager.notify(NOTIFICATION_ID, mBuilder.build());
                 }
@@ -510,17 +433,44 @@ public class TimerService extends Service {
         stopSelf();
     }
 
-    private SchedulePair getCurrentEvent(){
-        long now = (new Date()).getTime();
+    private void RemovePastEvents(long time){
         for(int i = 0; i < schedule.size(); i++){
-            if(schedule.get(i).getEnd() < now){
+            if(schedule.get(i).getEnd() < time){
                 schedule.remove(i);
                 i--;
             }
-            else if(schedule.get(i).getBegin() <= now && now <= schedule.get(i).getEnd()){
-                return schedule.get(i);
+        }
+    }
+
+    private int GetDivisions(){
+        int divisions = 0;
+        for(int i = 1; i < taskCount; i++){
+            if(active[i]){
+                divisions++;
             }
         }
-        return null;
+        return divisions;
+    }
+
+    public void SetEndTime(int hour, int minute){
+        Date now = new Date();
+        Date future = new Date(now.getTime());
+        future.setHours(hour);
+        future.setMinutes(minute);
+        future.setSeconds(0);
+        if(future.getTime() < now.getTime()){
+            Calendar c = Calendar.getInstance();
+            c.setTime(future);
+            c.add(Calendar.DATE, 1);
+            future = c.getTime();
+        }
+        finalEndTime = future.getTime();
+    }
+
+    private String FormatedTime(long timeRemaining){
+        long seconds = (int) (timeRemaining / 1000) % 60 ;
+        long minutes = (int) ((timeRemaining / (1000*60)) % 60);
+        long hours   = (int) (timeRemaining / (1000*60*60));
+        return hours + ":" + String.format("%1$02d" , minutes) + ":" + String.format("%1$02d" , seconds);
     }
 }
