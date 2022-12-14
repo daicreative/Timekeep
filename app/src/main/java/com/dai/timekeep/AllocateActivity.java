@@ -35,6 +35,8 @@ public class AllocateActivity extends AppCompatActivity implements AllocateTypeF
     private String taskName;
     private HashMap<String, Float> allocation; //Maps taskname to percent
 
+    final int PERCENT = 2; // must be divisible by 100
+
     protected void onStart() {
         super.onStart();
         overridePendingTransition(R.anim.fadein, R.anim.fadeout);
@@ -72,7 +74,7 @@ public class AllocateActivity extends AppCompatActivity implements AllocateTypeF
     new NumberPicker.OnValueChangeListener(){
         @Override
         public void onValueChange(NumberPicker numberPicker, int oldVal, int newVal) {
-            percentChosen = newVal == 1 ? percentLeft : (numberOfPercents - newVal + 1) * 5;
+            percentChosen = newVal == 1 ? percentLeft : (numberOfPercents - newVal + 1) * PERCENT;
         }
     };
 
@@ -85,7 +87,7 @@ public class AllocateActivity extends AppCompatActivity implements AllocateTypeF
                 int minutes = minutesUsed - hours * 60;
                 return "Max " + "(" + hours + ":" + String.format("%1$02d" , minutes) + ")";
             }
-            int percent = (numberOfPercents - i + 1) * 5;
+            int percent = (numberOfPercents - i + 1) * PERCENT;
             int minutesUsed = (int) (totalDuration / (60*1000) * ((percent / (float) 100)));
             int hours = (int) (minutesUsed)/60;
             int minutes = minutesUsed - hours * 60;
@@ -114,7 +116,7 @@ public class AllocateActivity extends AppCompatActivity implements AllocateTypeF
         }
         Intent i1 = new Intent();
         i1.putExtras(getIntent());
-        allocation.put(taskName, percent);
+        Allocate();
         i1.putExtra(getString(R.string.allocationMapExtra), allocation);
         i1.putExtra(getString(R.string.percentLeftExtra), percentLeft - percent);
         if(percent == percentLeft){
@@ -130,7 +132,7 @@ public class AllocateActivity extends AppCompatActivity implements AllocateTypeF
     public void onAllocateWheelButton() {
         Intent i1 = new Intent();
         i1.putExtras(getIntent());
-        allocation.put(taskName, percentChosen);
+        Allocate();
         i1.putExtra(getString(R.string.allocationMapExtra), allocation);
         i1.putExtra(getString(R.string.percentLeftExtra), percentLeft - percentChosen);
         if(percentChosen == percentLeft){
@@ -142,10 +144,21 @@ public class AllocateActivity extends AppCompatActivity implements AllocateTypeF
         startActivity(i1);
     }
 
+    private void Allocate(){
+
+        if(allocation.containsKey(taskName)){
+            float percentExisting = allocation.get(taskName);
+            allocation.put(taskName, percentExisting + percentChosen);
+        }
+        else{
+            allocation.put(taskName, percentChosen);
+        }
+    }
+
     @Override
     public void SetupNumberPicker(NumberPicker np) {
-        percentChosen = 5;
-        numberOfPercents = (int) Math.ceil((double) percentLeft/5); //why do you scroll down, just reverse the order Android guys
+        percentChosen = PERCENT;
+        numberOfPercents = (int) Math.ceil((double) percentLeft/PERCENT); //why do you scroll down, just reverse the order Android guys
         np.setMinValue(1);
         np.setMaxValue(numberOfPercents);
         np.setWrapSelectorWheel(false);

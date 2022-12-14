@@ -71,7 +71,7 @@ public class TimerService extends Service {
     }
 
     private long getScheduleTotalTime() {
-        //assumes no overlap
+        // assumes no overlap
         long sum = 0;
         long now = System.currentTimeMillis();
         for(SchedulePair pair : schedule){
@@ -121,6 +121,12 @@ public class TimerService extends Service {
         for(int i = 1; i < taskCount; i++){
             millisRemaining[i] = (long) (totalDuration * (map.get(taskNames[i]))/100);
         }
+
+        // Define the end tick
+        SharedPreferences sharedPreferences = getSharedPreferences(getString(R.string.sharedPrefs), MODE_PRIVATE);
+        int hour = sharedPreferences.getInt( getString(R.string.sleepHourKey), 0);
+        int minute = sharedPreferences.getInt( getString(R.string.sleepMinuteKey), 0);
+        SetEndTime(hour, minute);
 
         //Prep broadcast receiver for screen locking
         screenReceiver = new BroadcastReceiver() {
@@ -177,6 +183,7 @@ public class TimerService extends Service {
             divisions = 1;
         }
         long subtracted = sleepLength/divisions;
+        long leftOver = 0;
         for(int i = 1; i < taskCount; i++){
             if(active[i]){
                 if(millisRemaining[i] > subtracted){
@@ -184,12 +191,12 @@ public class TimerService extends Service {
                 }
                 else{
                     active[i] = false;
-                    long sleepLeft = subtracted - millisRemaining[i];
+                    leftOver += subtracted - millisRemaining[i];
                     millisRemaining[i] = 0;
-                    distributeSleep(sleepLeft);
                 }
             }
         }
+        if(leftOver > 0) distributeSleep(leftOver);
     }
 
     private void handleSleep(long timeStart, long timeEnd) {
@@ -346,11 +353,6 @@ public class TimerService extends Service {
                 }
                 active[alive] = true;
                 divisions = 1;
-            }
-
-            long min = Long.MAX_VALUE;
-            for(int i = 1; i < taskCount; i++){
-                if(active[i] && millisRemaining[i] < min) min = millisRemaining[i];
             }
 
             final String scheduleString = FormatedTime(millisRemaining[0]);

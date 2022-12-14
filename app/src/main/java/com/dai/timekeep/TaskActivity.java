@@ -38,7 +38,7 @@ public class TaskActivity extends AppCompatActivity implements MyAdapter.OnTaskL
     private SharedPreferences.Editor editor;
     private List<String> tasksList;
     private Set<String> taskSet;
-    private HashMap<String, Integer> map;
+    private HashMap<String, Float> map;
 
     protected void onStart() {
         super.onStart();
@@ -52,7 +52,7 @@ public class TaskActivity extends AppCompatActivity implements MyAdapter.OnTaskL
         Intent old = getIntent();
         _configuring = old.getBooleanExtra(getString(R.string.taskBooleanExtra), false);
         if(old.hasExtra(getString(R.string.allocationMapExtra))){
-            map = (HashMap<String, Integer>) getIntent().getSerializableExtra(getString(R.string.allocationMapExtra));
+            map = (HashMap<String, Float>) getIntent().getSerializableExtra(getString(R.string.allocationMapExtra));
         }
         sharedPreferences = getSharedPreferences(getString(R.string.sharedPrefs), MODE_PRIVATE);
         editor = sharedPreferences.edit();
@@ -118,13 +118,26 @@ public class TaskActivity extends AppCompatActivity implements MyAdapter.OnTaskL
         }
     };
 
+    static Toast taskToast = null;
+
     @Override
     public void OnTaskClick(int position) {
         if(_configuring){
             String taskName = tasksList.get(position);
             if(map != null && map.containsKey(taskName)){
-                Toast.makeText(getApplicationContext(),"Already used",Toast.LENGTH_SHORT).show();
-                return;
+                int percentExisting = map.get(taskName).intValue();
+                int totalDuration = getIntent().getIntExtra(getString(R.string.taskSleepLengthExtra), 0);
+                int minutesUsed = (int) (totalDuration / (60*1000) * ((percentExisting / (float) 100)));
+                int hours = (int) (minutesUsed)/60;
+                int minutes = minutesUsed - hours * 60;
+                String text = String.format("Already used: %d%% (%d:%02d)", percentExisting, hours, minutes);
+
+                if(taskToast != null){
+                    taskToast.cancel();
+                }
+
+                taskToast = Toast.makeText(getApplicationContext(),text,Toast.LENGTH_SHORT);
+                taskToast.show();
             }
             Intent i1 = new Intent(this, AllocateActivity.class);
             Intent old = getIntent();

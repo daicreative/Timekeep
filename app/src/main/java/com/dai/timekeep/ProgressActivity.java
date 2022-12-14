@@ -76,7 +76,6 @@ public class ProgressActivity extends AppCompatActivity implements ProgressAdapa
         taskNames[0] = getString(R.string.schedule);
         System.arraycopy(taskNamesTemp, 0, taskNames, 1, taskNamesTemp.length);
         active = new boolean[taskNames.length];
-        active[1] = true;
 
         //Set up service
         Intent serviceIntent = new Intent(this, TimerService.class);
