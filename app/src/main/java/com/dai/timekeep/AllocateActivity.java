@@ -34,12 +34,14 @@ public class AllocateActivity extends AppCompatActivity implements AllocateTypeF
     private int numberOfPercents;
     private String taskName;
     private HashMap<String, Float> allocation; //Maps taskname to percent
+    private HashMap<String, Float> originalAllocation; //Maps taskname to percent
 
     final int PERCENT = 2; // must be divisible by 100
 
     protected void onStart() {
         super.onStart();
         overridePendingTransition(R.anim.fadein, R.anim.fadeout);
+        allocation = new HashMap<>(originalAllocation);
     }
 
     @Override
@@ -56,11 +58,14 @@ public class AllocateActivity extends AppCompatActivity implements AllocateTypeF
 
         //Logic
         if(getIntent().hasExtra(getString(R.string.allocationMapExtra))){
-            allocation = (HashMap<String, Float>) getIntent().getSerializableExtra(getString(R.string.allocationMapExtra));
+            originalAllocation = (HashMap<String, Float>) getIntent().getSerializableExtra(getString(R.string.allocationMapExtra));
         }
         else{
-            allocation = new HashMap<>();
+            originalAllocation = new HashMap<>();
         }
+
+        allocation = new HashMap<>(originalAllocation);
+
         Intent intent = getIntent();
         taskName = intent.getStringExtra(getString(R.string.taskNameExtra));
         percentLeft = intent.getFloatExtra(getString(R.string.percentLeftExtra), 0);
