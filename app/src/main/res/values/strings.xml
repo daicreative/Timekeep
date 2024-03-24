@@ -15,7 +15,6 @@
     <string name="sleepHourKey">sleepHour</string>
     <string name="taskListKey">taskList</string>
     <string name="taskNameExtra">taskName</string>
-    <string name="taskOrderExtra">taskOrder</string>
     <string name="scheduleExtra">schedule</string>
     <string name="schedule">Schedule</string>
 </resources>

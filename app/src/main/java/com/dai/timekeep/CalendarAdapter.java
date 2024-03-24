@@ -8,73 +8,75 @@ import android.widget.RadioButton;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.util.List;
+
+public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.ViewHolder>
+{
+
+	private final String[] labels;
+	private final MutableInteger selected;
+	private final LayoutInflater mInflater;
+	private final OnCalListener mOnCalListener;
 
 
-public class CalendarAdapter extends RecyclerView.Adapter<CalendarAdapter.ViewHolder>  {
+	public CalendarAdapter(Context context, String[] labels, MutableInteger selected, OnCalListener onCalListener)
+	{
+		mInflater = LayoutInflater.from(context);
+		this.labels = labels;
+		this.mOnCalListener = onCalListener;
+		this.selected = selected;
+	}
 
-    private String[] labels;
-    private MutableInteger selected;
-    private LayoutInflater mInflater;
-    private OnCalListener mOnCalListener;
+	@NonNull
+	@Override
+	public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType)
+	{
+		View view = mInflater.inflate(R.layout.calendar_list_element, parent, false);
+		ViewHolder holder = new ViewHolder(view, mOnCalListener);
+		return holder;
+	}
 
+	@Override
+	public void onBindViewHolder(@NonNull ViewHolder holder, int position)
+	{
+		String label = labels[position];
+		holder.label.setText(label);
+		holder.button.setChecked(position == selected.value);
+	}
 
-    public CalendarAdapter(Context context, String[] labels, MutableInteger selected, OnCalListener onCalListener) {
-        mInflater = LayoutInflater.from(context);
-        this.labels = labels;
-        this.mOnCalListener = onCalListener;
-        this.selected = selected;
-    }
+	@Override
+	public int getItemCount()
+	{
+		return labels.length;
+	}
 
-    @NonNull
-    @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = mInflater.inflate(R.layout.calendar_list_element, parent, false);
-        ViewHolder holder = new ViewHolder(view, mOnCalListener);
-        return holder;
-    }
+	public interface OnCalListener
+	{
+		void OnCalClick(int position);
+	}
 
-    @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        String label = labels[position];
-        holder.label.setText(label);
-        if(position == selected.value){
-            holder.button.setChecked(true);
-        }
-        else{
-            holder.button.setChecked(false);
-        }
-    }
+	public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener
+	{
 
-    @Override
-    public int getItemCount() {
-        return labels.length;
-    }
+		TextView label;
+		RadioButton button;
+		OnCalListener onCalListener;
 
-    public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
+		public ViewHolder(@NonNull View itemView, OnCalListener onCalListener)
+		{
+			super(itemView);
+			label = itemView.findViewById(R.id.calendarElement);
+			button = itemView.findViewById(R.id.calRadio);
+			this.onCalListener = onCalListener;
+			itemView.setOnClickListener(this);
+		}
 
-        TextView label;
-        RadioButton button;
-        OnCalListener onCalListener;
-        public ViewHolder(@NonNull View itemView, OnCalListener onCalListener) {
-            super(itemView);
-            label = itemView.findViewById(R.id.calendarElement);
-            button = itemView.findViewById(R.id.calRadio);
-            this.onCalListener = onCalListener;
-            itemView.setOnClickListener(this);
-        }
-
-        @Override
-        public void onClick(View v) {
-            onCalListener.OnCalClick(getAdapterPosition());
-        }
-    }
-
-    public interface OnCalListener{
-        void OnCalClick(int position);
-    }
+		@Override
+		public void onClick(View v)
+		{
+			onCalListener.OnCalClick(getAdapterPosition());
+		}
+	}
 
 }

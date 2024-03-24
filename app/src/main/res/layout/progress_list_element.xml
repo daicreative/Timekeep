@@ -5,6 +5,16 @@
     android:orientation="horizontal"
     android:id = "@+id/progressElement">
 
+    <ImageView
+        android:id="@+id/dragIcon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="0"
+        android:padding="20sp"
+        android:src="@drawable/drag_icon"
+        android:textAlignment="center"
+        android:tint="@color/colorPrimary" />
+
     <TextView
         android:id="@+id/taskProgressName"
         android:layout_width="wrap_content"
@@ -38,9 +48,6 @@
         android:textAppearance="?android:attr/textAppearanceLarge"
         android:textColor="@color/colorPrimary"
         android:textSize="20sp" />
-
-
-
 
 
 </LinearLayout>
